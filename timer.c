@@ -9,7 +9,9 @@
 #define SETTINGS_ON_1 1
 #define SETTINGS_ON_2 2
 #define SETTINGS_OFF 0
-
+#define BUTTON_ON 0
+#define BUTTON_OFF 1
+#define BUTTON_TIME 100
 /******************************Valtozok**************************************/
 int				time;
 volatile unsigned char	tenth=0;
@@ -24,7 +26,12 @@ unsigned char	stopper_sec=0;
 unsigned char	stopper_min=0;
 volatile unsigned char	disp_flag=0;
 unsigned char	err;
-unsigned char	but1, but2, but3;
+unsigned char	but1=BUTTON_OFF;
+unsigned char	but2=BUTTON_OFF;
+unsigned char	but3=BUTTON_OFF;
+unsigned char	but1_buffer=0;
+unsigned char	but2_buffer=0;
+unsigned char	but3_buffer=0;
 unsigned char	mod=MOD_CLOCK;
 unsigned char	stopper_state=STOPPER_OFF;
 unsigned char 	settings_state=SETTINGS_OFF;
@@ -241,6 +248,36 @@ switch(mod){
 		
 }
 }
+
+void set_buttons(void)
+{	
+	but1=DPY_TRM_S01__BUTTON_1_GET_STATE();
+	if(but1==BUTTON_ON){
+		but1_buffer++;	
+	}
+	else{
+		but1_buffer=0;
+	}
+	but2=DPY_TRM_S01__BUTTON_2_GET_STATE();
+	if(but2==BUTTON_ON){
+		but2_buffer++;	
+	}
+	else{
+		but2_buffer=0;
+	}
+	but3=DPY_TRM_S01__BUTTON_3_GET_STATE();
+	if(but3==BUTTON_ON){
+		but3_buffer++;	
+	}
+	else{
+		but3_buffer=0;
+	}
+	if (butbuffer1>BUTTON_TIME) button1_pushed();
+	if (butbuffer2>BUTTON_TIME) button2_pushed();
+	if (butbuffer3>BUTTON_TIME) button3_pushed();
+	
+	
+}
 /*****************  stopper  *************************/
 void stopper_time(void)
 {
@@ -266,12 +303,7 @@ int main (void)
    {
    
     
-	but1=DPY_TRM_S01__BUTTON_1_GET_STATE();
-	but2=DPY_TRM_S01__BUTTON_2_GET_STATE();
-	but3=DPY_TRM_S01__BUTTON_3_GET_STATE();
-	if (but1) button1_pushed();
-	if (but2) button2_pushed();
-	if (but3) button3_pushed();
+	set_buttons();
 	flash=set_time();
 	stopper_time();
 	if (disp_flag==1){
