@@ -1,0 +1,217 @@
+#include "mcu_avr_atmega128_api.h" 	// MCU API   
+#include "dpy_trm_s01.h"			// DPY API
+/*********************************Constant*************************************/
+#define MOD_CLOCK 1
+#define MOD_STOPPER 2
+#define MOD_DATE 3
+#define STOPPER_ON 1
+#define STOPPER_OFF 0
+#define SETTINGS_ON_1 1
+#define SETTINGS_ON_2 2
+#define SETTINGS_OFF 0
+
+/******************************Valtozok**************************************/
+int				time;
+volatile unsigned char	tenth=0;
+unsigned char	sec=0;
+unsigned int	cnt=0;
+unsigned char	min=0;
+unsigned char	time_hours=0;
+unsigned char	time_days=1;
+unsigned char	time_month=1;
+unsigned char	stopper_tenth=0;
+unsigned char	stopper_sec=0;
+unsigned char	stopper_min=0;
+volatile unsigned char	disp_flag=0;
+unsigned char	err;
+unsigned char	but1, but2, but3;
+unsigned char	mod=MOD_CLOCK;
+unsigned char	stopper_state=STOPPER_OFF;
+unsigned char 	settings_state=SETTINGS_OFF;
+unisgned char * display_1;
+unisgned char * display_2;
+unsigned char	flash;
+
+/********  function prototypes  ***************************/
+void Timer0_Init(void);
+ISR(SIG_OVERFLOW0);
+int main(void);
+
+/********  Timer0 overflow IT Service Routine  ***************************/
+ISR(SIG_OUTPUT_COMPARE0) // Timer0 overflow
+{	
+	cnt++;
+	if(cnt==100){
+		tenth++;
+   		disp_flag=1;
+		cnt=0;
+		if(stopper_state)stopper_tenth++;
+	}
+}
+/*****************************   Functions  *****************************/
+void display()
+{	unsigned char fraction;
+	switch(mod){
+	case MOD_CLOCK:
+		display_1=&hour;
+		display_2=&min;
+		fraction=2*flash;
+	break;
+	case MOD_DATE:
+		display_1=&time_month;
+		display_2=&time_days;
+		fraction=2;
+	break;
+	case MOD_STOPPER:
+		if(stopper_min){
+		display_1=&stopper_sec;
+		display_2=&stopper_tenth;
+		fraction=1;
+		}
+		else{
+		display_1=&stopper_min;
+		display_2=&stopper_sec;
+		fraction=2;
+		
+		}
+}
+to_display(*display_1,*display_2,fraction,settings_state);
+}
+void set_mod(){
+	if(mod==MOD_DATE){
+		mod=MOD_CLOCK;
+		}
+	else{
+		mod++;
+		}
+}
+void set_settings(){
+	if(settings_state==SETTINGS_ON_2){
+		settings_state=SETTINGS_OFF;
+		}
+	else{
+		settings_state++;
+		}
+void set_stopper_state(){
+	stopper_state=!stopper_state;
+	
+}
+}
+void stopper_reset(){
+	stopper_min=0;
+	stopper_sec=0;
+	stopper_tenth=0;
+}
+
+void button1_pushed()
+{
+if(settings_state){
+	switch(mod){
+		case MOD_CLOCK:
+			if(settings_state==SETTINGS_ON_1){
+				hour--;
+			}
+			if(settings_state==SETTINGS_ON_2){
+				min--;
+			}
+			break;
+		case MOD_DATE:
+			if(settings_state==SETTINGS_ON_1){
+				time_month--;
+			}
+			if(settings_state==SETTINGS_ON_2){
+				time_days--;
+			}
+			break;
+		case MOD_STOPPER:
+			settings_state=SETTINGS_OFF;
+			set_mod();
+	}
+}
+else {
+	set_mod();
+}
+}
+
+void button2_pushed()
+{
+switch(mod){
+		case MOD_CLOCK:
+			if(settings_state==SETTINGS_ON_1){
+				hour++;
+			}
+			if(settings_state==SETTINGS_ON_2){
+				min++;
+			}
+			break;
+		case MOD_DATE:
+			if(settings_state==SETTINGS_ON_1){
+				time_month++;
+			}
+			if(settings_state==SETTINGS_ON_2){
+				time_days++;
+			}
+			break;
+		case MOD_STOPPER:
+			set_stopper_state();
+	}
+}
+
+void button3_pushed()
+{
+switch(mod){
+	case MOD_CLOCK:
+		set_settings();
+	break;
+	case MOD_DATE:
+		set_settings();
+	break;
+	case MOD_STOPPER:
+		stopper_reset();
+		set_stopper_state();
+		
+}
+}
+
+/********  main program  ***************************/
+int main (void)
+{
+   dpy_trm_s01__Init();		// Initialize the DPY dysplay card
+   Timer0_Init();			// Initialize timer0
+   dpy_trm_s01__Temp_Init(TMP75_JUMPER_OFF,TMP75_JUMPER_OFF,TMP75_JUMPER_OFF);	
+							/* Initialisation of temp. sensor */ 
+   SYS_LED_DIR_OUTPUT();	// Set the pin driving the system led to output
+   SYS_LED_ON();			// Switch on system led
+   sei();					// enable interrupts
+   temp_sensor=24.3; 
+   while(1)
+   {
+   
+    
+	but1=DPY_TRM_S01__BUTTON_1_GET_STATE();
+	but2=DPY_TRM_S01__BUTTON_2_GET_STATE();
+	but3=DPY_TRM_S01__BUTTON_3_GET_STATE();
+	if (but1) button1_pushed();
+	if (but2) button2_pushed();
+	if (but3) button3_pushed();
+	time(/*kitölteni!!!*/);
+	
+	if (disp_flag==1){
+	to_display(); 
+	}
+	
+	
+	
+   }
+
+}
+
+
+/********  Timer0 initialisation  ***************************/
+void Timer0_Init(void)
+{
+   TCCR0=0x0B;			// Set TIMER0 prescaler to CLK/32
+   TCNT0=0;				// Set the counter initial value
+   OCR0=0xF9;
+   TIMSK=_BV(OCIE0);	// Enable TIMER0 overflow interrupt                 
+}
