@@ -49,13 +49,15 @@ ISR(SIG_OUTPUT_COMPARE0) // Timer0 overflow
 	}
 }
 /*****************************   Functions  *****************************/
-void display()
+
+/*****************************  Display  *************************************/
+void display(void)
 {	unsigned char fraction;
 	switch(mod){
 	case MOD_CLOCK:
 		display_1=&hour;
 		display_2=&min;
-		fraction=2*flash;
+		fraction=2;
 	break;
 	case MOD_DATE:
 		display_1=&time_month;
@@ -75,9 +77,10 @@ void display()
 		
 		}
 }
-to_display(*display_1,*display_2,fraction,settings_state);
+to_display(/*kitölteni*/);
 }
-void set_mod(){
+/******************************************  State modification  ****************************************/
+void set_mod(void){
 	if(mod==MOD_DATE){
 		mod=MOD_CLOCK;
 		}
@@ -97,13 +100,13 @@ void set_stopper_state(){
 	
 }
 }
-void stopper_reset(){
+void stopper_reset(void){
 	stopper_min=0;
 	stopper_sec=0;
 	stopper_tenth=0;
 }
-
-void button1_pushed()
+/*************************************   Button pushed   ********************************************************/
+void button1_pushed(void)
 {
 if(settings_state){
 	switch(mod){
@@ -133,7 +136,7 @@ else {
 }
 }
 
-void button2_pushed()
+void button2_pushed(void)
 {
 switch(mod){
 		case MOD_CLOCK:
@@ -157,7 +160,7 @@ switch(mod){
 	}
 }
 
-void button3_pushed()
+void button3_pushed(void)
 {
 switch(mod){
 	case MOD_CLOCK:
@@ -172,7 +175,16 @@ switch(mod){
 		
 }
 }
-
+/*****************  stopper  *************************/
+void stopper_time(void)
+{
+	if(stopper_tenth==10){
+		stopper_sec++;
+	}
+	if(stopper_sec==60)
+		stopper_min++;
+	}
+}
 /********  main program  ***************************/
 int main (void)
 {
@@ -194,8 +206,8 @@ int main (void)
 	if (but1) button1_pushed();
 	if (but2) button2_pushed();
 	if (but3) button3_pushed();
-	time(/*kitölteni!!!*/);
-	
+	flash=time(/*kitölteni!!!*/);
+	stopper_time();
 	if (disp_flag==1){
 	to_display(); 
 	}
